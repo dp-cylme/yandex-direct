@@ -9,8 +9,18 @@ import Control.Exception (Exception)
 type Token = Text
 type Method = Text
 
-data YDException =
-    OtherYDError
-    deriving (Typeable,Show,Eq)
+data YDException = YDNotEnoughPoint Text Text
+  | YDTooManyReportsInQueue Text Text
+  | YDReportNotReady Text Text 
+  | OtherYDError Int Text Text
+  deriving (Typeable,Show,Eq)
 
 instance Exception YDException
+
+
+ydException :: Int -> Text -> Text -> YDException
+ydException code str detail = case code of
+                                152 -> YDNotEnoughPoint str detail
+                                31 -> YDTooManyReportsInQueue str detail
+                                92 -> YDReportNotReady str detail
+                                _ -> OtherYDError code str detail
