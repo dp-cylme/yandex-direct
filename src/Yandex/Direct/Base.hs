@@ -30,12 +30,18 @@ data GenYDReq a = GenYDReq
 
 instance ToJSON a => ToJSON (GenYDReq a)
 
-data GenYDRep a = GenYDRep
-    { _data :: a
-    } | GenYDErr { error_code :: Int, error_str :: Text, error_detail :: Text} deriving (Show)
+data GenYDRep a
+    = GenYDRep { _data :: a}
+    | GenYDErr { error_code :: Int
+               , error_str :: Text
+               , error_detail :: Text}
+    deriving (Show)
 
 instance FromJSON a => FromJSON (GenYDRep a) where
-    parseJSON (Object v) = (GenYDRep <$> v .: "data") <|> (GenYDErr <$> v .: "error_code" <*> v .: "error_str" <*> v .: "error_detail")
+    parseJSON (Object v) =
+        (GenYDRep <$> v .: "data") <|>
+        (GenYDErr <$> v .: "error_code" <*> v .: "error_str" <*>
+         v .: "error_detail")
     parseJSON _ = mzero
 
 ydpost
@@ -50,11 +56,12 @@ ydpost m p t =
              , param = p
              , token = t
              , locale = "ru"
-             }) >>= \r -> trace (show r) $
-    asJSON r >>=
-    extractData
+             }) >>= asJSON >>= extractData
   where
-    extractData :: (Show b) => Response (GenYDRep b) -> IO b
-    extractData r = case r ^. responseBody of
-                      (GenYDRep d) -> return d
-                      (GenYDErr code str detail) -> throwIO $ ydException code str detail
+    extractData
+        :: (Show b)
+        => Response (GenYDRep b) -> IO b
+    extractData r =
+        case r ^. responseBody of
+            (GenYDRep d) -> return d
+            (GenYDErr code str detail) -> throwIO $ ydException code str detail
